@@ -6,7 +6,7 @@ type Msg = { id: string; role: "user" | "listener"; content: string; ts: number 
 // AI reply function
 async function makeListenerReply(userText: string): Promise<string> {
   try {
-    const res = await fetch("/api/reply", {
+    const res = await fetch(`${API_URL}/api/reply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: userText }),

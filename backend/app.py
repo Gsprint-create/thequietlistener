@@ -1,6 +1,7 @@
-import os, traceback, requests
+import os, traceback
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from openai import OpenAI
 
 app = Flask(__name__)
 
@@ -10,8 +11,8 @@ CORS(app, origins=[
     "https://thequietlistener.org"
 ])
 
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
-MODEL = os.getenv("OLLAMA_MODEL", "phi3:3.8b-mini-instruct")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 SYSTEM_PROMPT = (
     "You are The Quiet Listener — calm, human, and emotionally present. "
@@ -33,17 +34,11 @@ def root():
 
 @app.get("/health")
 def health():
-    ok_ollama = False
-    try:
-        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=3)
-        ok_ollama = (r.status_code == 200)
-    except Exception:
-        ok_ollama = False
-
     return jsonify({
         "ok": True,
-        "ollama": ok_ollama,
-        "model": MODEL
+        "provider": "openai",
+        "model": MODEL,
+        "has_api_key": bool(os.getenv("OPENAI_API_KEY"))
     })
 
 @app.post("/api/reply")
@@ -54,38 +49,19 @@ def reply():
     if not user_text:
         return jsonify({"error": "empty_message"}), 400
 
-    prompt = (
-        f"{SYSTEM_PROMPT}\n\n"
-        f"User message:\n\"\"\"\n{user_text}\n\"\"\"\n\n"
-        "Respond in a natural, human way in 1–3 short sentences. "
-        "Do not follow a fixed pattern. "
-        "Sometimes just acknowledge, sometimes reflect briefly. "
-        "Only ask a question occasionally, not every time."
-    )
-
     try:
-        resp = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={
-                "model": MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.75,
-                    "top_p": 0.9,
-                    "repeat_penalty": 1.2,
-                    "num_predict": 160
-}
-                 },
-            timeout=60,
+        response = client.responses.create(
+            model=MODEL,
+            instructions=SYSTEM_PROMPT,
+            input=user_text,
+            temperature=0.75,
+            max_output_tokens=160,
         )
 
-        resp.raise_for_status()
-        out = resp.json()
-        text = (out.get("response") or "").strip()
+        text = (response.output_text or "").strip()
 
         if not text:
-            raise ValueError("empty response from model")
+            raise ValueError("empty response from OpenAI")
 
         return jsonify({"reply": text})
 
@@ -93,11 +69,11 @@ def reply():
         traceback.print_exc()
         fallback = (
             "I’m here with you. Something isn’t connecting on my side, "
-            "but you can still keep talking. What feels heaviest right now?"
+            "but you can still keep talking."
         )
         return jsonify({
             "reply": fallback,
-            "warning": "ollama_unavailable"
+            "warning": "openai_unavailable"
         }), 200
 
 if __name__ == "__main__":
