@@ -5,28 +5,20 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-# --- CORS (Vercel + local + production) ---
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://thequietlistener.org"
-        ],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "methods": ["GET", "POST", "OPTIONS"]
-    }
-})
+CORS(app, supports_credentials=False)
+
+ALLOWED_ORIGINS = {
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://thequietlistener.org",
+    "https://www.thequietlistener.org",
+}
 
 @app.after_request
 def after_request(response):
     origin = request.headers.get("Origin")
 
-    if origin and (
-        origin == "https://thequietlistener.org"
-        or origin.endswith(".vercel.app")
-        or origin in ["http://localhost:5173", "http://127.0.0.1:5173"]
-    ):
+    if origin in ALLOWED_ORIGINS or (origin and origin.endswith(".vercel.app")):
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
         response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
