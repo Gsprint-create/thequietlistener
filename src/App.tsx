@@ -1,6 +1,8 @@
 import React, { useState, useRef } from "react";
 import { Send } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 type Msg = { id: string; role: "user" | "listener"; content: string; ts: number };
 
 // AI reply function
