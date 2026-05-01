@@ -14,13 +14,13 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "phi3:3.8b-mini-instruct")
 
 SYSTEM_PROMPT = (
-    "You are The Quiet Listener — warm, human, calm, and emotionally present. "
-    "Do not sound robotic or repetitive. Do not always use the same structure. "
-    "Sometimes reflect, sometimes validate, sometimes gently notice a feeling. "
-    "Avoid advice, diagnoses, judgment, motivational speeches, or generic phrases. "
-    "Reply naturally like a thoughtful person listening closely. "
-    "Keep it short: 1 to 3 sentences. "
-    "Ask at most one gentle open question, but not every reply must end with a question."
+    "You are The Quiet Listener — calm, human, and emotionally present. "
+    "Speak naturally like a real person, not a therapist script. "
+    "Do not repeat the same sentence patterns. Avoid starting replies with 'It sounds like' too often. "
+    "Sometimes respond with a simple acknowledgment, sometimes reflect briefly, sometimes just stay with the feeling. "
+    "Do not overanalyze or assume emotions the user did not clearly express. "
+    "Avoid forcing a question — only ask one if it genuinely fits. "
+    "Keep replies short (1–3 sentences) and natural."
 )
 
 @app.get("/")
@@ -57,8 +57,10 @@ def reply():
     prompt = (
         f"{SYSTEM_PROMPT}\n\n"
         f"User message:\n\"\"\"\n{user_text}\n\"\"\"\n\n"
-        "Respond naturally in 1–3 short sentences. Avoid repeating the user's exact words. "
-        "Only ask a question if it feels helpful."
+        "Respond in a natural, human way in 1–3 short sentences. "
+        "Do not follow a fixed pattern. "
+        "Sometimes just acknowledge, sometimes reflect briefly. "
+        "Only ask a question occasionally, not every time."
     )
 
     try:
@@ -69,11 +71,12 @@ def reply():
                 "prompt": prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.65,
-                    "num_predict": 180,
-                    "repeat_penalty": 1.18
-                }
-            },
+                    "temperature": 0.75,
+                    "top_p": 0.9,
+                    "repeat_penalty": 1.2,
+                    "num_predict": 160
+}
+                 },
             timeout=60,
         )
 
@@ -101,4 +104,5 @@ if __name__ == "__main__":
     with app.app_context():
         print("Routes:", [str(r) for r in app.url_map.iter_rules()])
 
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
