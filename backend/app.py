@@ -5,12 +5,36 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-CORS(app, origins=[
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://thequietlistener.org"
-])
+# --- CORS (Vercel + local + production) ---
+CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://thequietlistener.org"
+        ],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "OPTIONS"]
+    }
+})
 
+@app.after_request
+def after_request(response):
+    origin = request.headers.get("Origin")
+
+    if origin and (
+        origin == "https://thequietlistener.org"
+        or origin.endswith(".vercel.app")
+        or origin in ["http://localhost:5173", "http://127.0.0.1:5173"]
+    ):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+
+    return response
+
+# --- OpenAI ---
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
@@ -24,6 +48,7 @@ SYSTEM_PROMPT = (
     "Keep replies short (1–3 sentences) and natural."
 )
 
+# --- Routes ---
 @app.get("/")
 def root():
     return {
@@ -76,9 +101,8 @@ def reply():
             "warning": "openai_unavailable"
         }), 200
 
-if __name__ == "__main__":
-    with app.app_context():
-        print("Routes:", [str(r) for r in app.url_map.iter_rules()])
 
+# --- Run ---
+if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
