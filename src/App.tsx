@@ -1,7 +1,10 @@
 import React, { useState, useRef } from "react";
 import { Send } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://thequietlistener-production.up.railway.app";
+
+console.log("API_URL =", API_URL);
 
 type Msg = { id: string; role: "user" | "listener"; content: string; ts: number };
 
